@@ -1,6 +1,7 @@
 go-termstyle
 ============
 Plan your terminal colors.
+
 ![Screenshot](https://raw.githubusercontent.com/Djent-/go-termstyle/master/termstyle%20demo.png)
 
 Install
