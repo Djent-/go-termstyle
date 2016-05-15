@@ -4,7 +4,10 @@ import(
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/cairo"
-	//"log"
+	"fmt"
+	"strings"
+	"strconv"
+	"log"
 )
 
 type MainWindow struct {
@@ -63,6 +66,9 @@ type MainWindow struct {
 	// Buttons
 	ExportButton *gtk.Button
 	RedrawButton *gtk.Button
+
+	// Dialogs
+	//ExportDialog *gtk.FileChooserDialog
 }
 
 type CairoColor struct {
@@ -92,6 +98,7 @@ func NewMainWindow() (mw *MainWindow) {
 	mw.Window.Connect("destroy", func() {
 		gtk.MainQuit()
 	})
+	mw.Window.SetDefaultSize(650,700)
 	// Create MainArea
 	mw.MainArea, _ = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	// Create StyleArea
@@ -155,7 +162,68 @@ func NewMainWindow() (mw *MainWindow) {
 	mw.WhiteLight, _ = gtk.ColorButtonNew()
 
 	// Set ColorButtons to default state
+	mw.SpecialDark.SetUseAlpha(false)
+	sdRGBA := gdk.NewRGBA(29.0/256,31.0/256,33.0/256,1)
+	mw.SpecialDark.SetRGBA(sdRGBA)
+	mw.SpecialLight.SetUseAlpha(false)
+	slRGBA := gdk.NewRGBA(197.0/256,200.0/256,198.0/256,1)
+	mw.SpecialLight.SetRGBA(slRGBA)
 
+	mw.BlackDark.SetUseAlpha(false)
+	bkdRGBA := gdk.NewRGBA(40.0/256,42.0/256,46.0/256,1)
+	mw.BlackDark.SetRGBA(bkdRGBA)
+	mw.BlackLight.SetUseAlpha(false)
+	bklRGBA := gdk.NewRGBA(55.0/256,59.0/256,65.0/256,1)
+	mw.BlackLight.SetRGBA(bklRGBA)
+
+	mw.RedDark.SetUseAlpha(false)
+	rdRGBA := gdk.NewRGBA(165.0/256,66.0/256,66.0/256,1)
+	mw.RedDark.SetRGBA(rdRGBA)
+	mw.RedLight.SetUseAlpha(false)
+	rlRGBA := gdk.NewRGBA(204.0/256,102.0/256,102.0/256,1)
+	mw.RedLight.SetRGBA(rlRGBA)
+
+	mw.GreenDark.SetUseAlpha(false)
+	gdRGBA := gdk.NewRGBA(140.0/256,148.0/256,64.0/256,1)
+	mw.GreenDark.SetRGBA(gdRGBA)
+	mw.GreenLight.SetUseAlpha(false)
+	glRGBA := gdk.NewRGBA(181.0/256,189.0/256,104.0/256,1)
+	mw.GreenLight.SetRGBA(glRGBA)
+
+	mw.YellowDark.SetUseAlpha(false)
+	ydRGBA := gdk.NewRGBA(222.0/256,147.0/256,95.0/256,1)
+	mw.YellowDark.SetRGBA(ydRGBA)
+	mw.YellowLight.SetUseAlpha(false)
+	ylRGBA := gdk.NewRGBA(240.0/256,198.0/256,116.0/256,1)
+	mw.YellowLight.SetRGBA(ylRGBA)
+
+	mw.BlueDark.SetUseAlpha(false)
+	bdRGBA := gdk.NewRGBA(95.0/256,129.0/256,157.0/256,1)
+	mw.BlueDark.SetRGBA(bdRGBA)
+	mw.BlueLight.SetUseAlpha(false)
+	blRGBA := gdk.NewRGBA(129.0/256,162.0/256,190.0/256,1)
+	mw.BlueLight.SetRGBA(blRGBA)
+
+	mw.MagentaDark.SetUseAlpha(false)
+	mdRGBA := gdk.NewRGBA(133.0/256,103.0/256,143.0/256,1)
+	mw.MagentaDark.SetRGBA(mdRGBA)
+	mw.MagentaLight.SetUseAlpha(false)
+	mlRGBA := gdk.NewRGBA(179.0/256,148.0/256,187.0/256,1)
+	mw.MagentaLight.SetRGBA(mlRGBA)
+
+	mw.CyanDark.SetUseAlpha(false)
+	cdRGBA := gdk.NewRGBA(94.0/256,141.0/256,135.0/256,1)
+	mw.CyanDark.SetRGBA(cdRGBA)
+	mw.CyanLight.SetUseAlpha(false)
+	clRGBA := gdk.NewRGBA(138.0/256,190.0/256,183.0/256,1)
+	mw.CyanLight.SetRGBA(clRGBA)
+
+	mw.WhiteDark.SetUseAlpha(false)
+	wdRGBA := gdk.NewRGBA(112.0/256,120.0/256,128.0/256,1)
+	mw.WhiteDark.SetRGBA(wdRGBA)
+	mw.WhiteLight.SetUseAlpha(false)
+	wlRGBA := gdk.NewRGBA(197.0/256,200.0/256,198.0/256,1)
+	mw.WhiteLight.SetRGBA(wlRGBA)
 
 	// Pack ColorButton Boxes
 	mw.SpecialB.PackStart(mw.SpecialDark, true, true, 1)
@@ -206,6 +274,10 @@ func NewMainWindow() (mw *MainWindow) {
 
 	// Create export button
 	mw.ExportButton, _ = gtk.ButtonNewWithLabel("Export .Xresources")
+	mw.ExportButton.Connect("clicked", mw.saveFile)
+
+	// Create FileChooserDialog
+	//mw.ExportDialog, _ = gtk.FileChooserDialogNew()
 
 	// Pack ExportArea
 	mw.ExportArea.PackStart(mw.ExportButton, true, true, 1)
@@ -219,16 +291,22 @@ func NewMainWindow() (mw *MainWindow) {
 
 func (mw *MainWindow) draw(da *gtk.DrawingArea, cr *cairo.Context) {
 	// Get values from all the ColorButtons
-	colors := convertAllRGBA(mw.getColors())
+	colors := convertAllRGBAtoCC(mw.getColors())
+	hexvals := convertAllRGBAtoHex(mw.getColors())
 	// Draw two columns of rectangles
-	h, w := float64(30), float64(30)
+	h, w := float64(85), float64(100)
 	// Loop
 	z := 0
-	for x := 1; x <= 2; x++ {
-		for y := 1; y <= 9; y++ {
+	var fontsize float64 = 25.0
+	for y := 1; y <= 9; y++ {
+		for x := 1; x <= 2; x++ {
 			//log.Println("draw z:", z)
-			cr.Rectangle(float64(x-1) * w, float64(y-1) * h, w, h)
+			cr.Rectangle(float64(x-1) * w * 2.3, float64(y-1) * h, w, h)
 			cr.SetSourceRGB(colors[z].R, colors[z].G, colors[z].B)
+			cr.Fill()
+			cr.MoveTo(float64(x-1) * w * 2.3 + w + 5, float64(y-1) * h + h / 2)
+			cr.SetFontSize(fontsize)
+			cr.ShowText(hexvals[z])
 			cr.Fill()
 			z++
 		}
@@ -257,6 +335,27 @@ func (mw *MainWindow) getColors() (colors []*gdk.RGBA){
 	return
 }
 
+func (mw *MainWindow) saveFile(button *gtk.Button) {
+	// Create a FileChooserDialog
+	filechooser, _ := gtk.FileChooserDialogNewWith2Buttons(
+		"Save As", // Dialog title
+		mw.Window, // Parent Window
+		gtk.FILE_CHOOSER_ACTION_SAVE, // File Chooser Action
+		"Cancel", // Button 1 Text
+		gtk.RESPONSE_CANCEL, // Response Type
+		"Save", // Button 2 Text
+		gtk.RESPONSE_OK,  // Response Type
+	)
+	// Show the FileChooserDialog
+	filechooser.Show()
+
+	// Get the information
+	folder, _ := filechooser.GetCurrentFolder()
+	filename := filechooser.GetFilename()
+	log.Println("Folder: ", folder)
+	log.Println("Filename:", filename)
+}
+
 func RGBAtoCairoColor(color *gdk.RGBA) (cc CairoColor) {
 	// Convert RGBA (0-256, 0-256, 0-256) to float64 (0-1, 0-1, 0-1) for cairo
 	floats := color.Floats()
@@ -266,11 +365,42 @@ func RGBAtoCairoColor(color *gdk.RGBA) (cc CairoColor) {
 	return
 }
 
-func convertAllRGBA(colors []*gdk.RGBA) (ccs []CairoColor) {
+func convertAllRGBAtoCC(colors []*gdk.RGBA) (ccs []CairoColor) {
 	// Convert a slice of gdk.RGBA colors to CairoColors
 	for _, rgba := range colors {
 		ccs = append(ccs, RGBAtoCairoColor(rgba))
 		//log.Println("colors []*gdk.RGBA index:", index)
 	}
 	return
+}
+
+func RGBAtoHex(color *gdk.RGBA) (hexadecimal string) {
+	rgbastring := color.String()
+	rgbastring = strings.Replace(rgbastring, "rgb(", "", -1)
+	rgbastring = strings.Replace(rgbastring, ")", "", -1)
+	rgbvals := strings.Split(rgbastring, ",")
+	r, _ := strconv.Atoi(rgbvals[0])
+	g, _ := strconv.Atoi(rgbvals[1])
+	b, _ := strconv.Atoi(rgbvals[2])
+	//log.Println("r, g, b: ", r, g, b)
+	hexadecimal = fmt.Sprintf("#%s%s%s", hexenc(r), hexenc(g), hexenc(b))
+	//log.Println("Added ", hexadecimal)
+	return
+}
+
+func convertAllRGBAtoHex(colors []*gdk.RGBA) (hexcolors []string) {
+	// Convert a slice of gdk.RGBA colors to the format #00bbFF
+	for _, rgba := range colors {
+		hexcolors = append(hexcolors, RGBAtoHex(rgba))
+	}
+	return
+}
+
+func hexenc(i int) (hexadecimal string) {
+	hexdigits := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"}
+	dig1 := 0
+	for ; i >= 16; i = i - 16{
+		dig1++
+	}
+	return fmt.Sprintf("%s%s", hexdigits[dig1], hexdigits[i])
 }
