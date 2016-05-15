@@ -346,14 +346,21 @@ func (mw *MainWindow) saveFile(button *gtk.Button) {
 		"Save", // Button 2 Text
 		gtk.RESPONSE_OK,  // Response Type
 	)
-	// Show the FileChooserDialog
-	filechooser.Show()
 
+	// Show the FileChooserDialog
+	//filechooser.Show()
+	// Get a response
+	response := filechooser.Run()
+	//log.Println("filechooser response: ", response)
 	// Get the information
-	folder, _ := filechooser.GetCurrentFolder()
-	filename := filechooser.GetFilename()
-	log.Println("Folder: ", folder)
-	log.Println("Filename:", filename)
+	switch response {
+	case -5: // case gtk.RESPONSE_OK
+		filename := filechooser.GetFilename()
+		log.Println("Filename:", filename)
+		filechooser.Destroy()
+	case -6: // case gtk.RESPONSE_CANCEL
+		filechooser.Destroy()
+	}
 }
 
 func RGBAtoCairoColor(color *gdk.RGBA) (cc CairoColor) {
