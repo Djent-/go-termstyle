@@ -2,6 +2,13 @@ go-termstyle
 ============
 Plan your terminal colors.
 
+Install
+-------
+
+go install github.com/djent-/go-termstyle
+
+Note: relies on https://github.com/gotk3/gotk3
+
 Plans
 -----
 1. Cross platform GUI `DONE`
