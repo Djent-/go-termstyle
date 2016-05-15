@@ -7,7 +7,9 @@ import(
 	"fmt"
 	"strings"
 	"strconv"
-	"log"
+	//"log"
+	"os"
+	//"io/ioutil"
 )
 
 type MainWindow struct {
@@ -274,7 +276,7 @@ func NewMainWindow() (mw *MainWindow) {
 
 	// Create export button
 	mw.ExportButton, _ = gtk.ButtonNewWithLabel("Export .Xresources")
-	mw.ExportButton.Connect("clicked", mw.saveFile)
+	mw.ExportButton.Connect("clicked", mw.saveDialog)
 
 	// Create FileChooserDialog
 	//mw.ExportDialog, _ = gtk.FileChooserDialogNew()
@@ -335,7 +337,7 @@ func (mw *MainWindow) getColors() (colors []*gdk.RGBA){
 	return
 }
 
-func (mw *MainWindow) saveFile(button *gtk.Button) {
+func (mw *MainWindow) saveDialog(button *gtk.Button) {
 	// Create a FileChooserDialog
 	filechooser, _ := gtk.FileChooserDialogNewWith2Buttons(
 		"Save As", // Dialog title
@@ -346,9 +348,8 @@ func (mw *MainWindow) saveFile(button *gtk.Button) {
 		"Save", // Button 2 Text
 		gtk.RESPONSE_OK,  // Response Type
 	)
-
-	// Show the FileChooserDialog
-	//filechooser.Show()
+	// Set the default filename as ".Xresources"
+	filechooser.SetCurrentName(".Xresources")
 	// Get a response
 	response := filechooser.Run()
 	//log.Println("filechooser response: ", response)
@@ -356,11 +357,57 @@ func (mw *MainWindow) saveFile(button *gtk.Button) {
 	switch response {
 	case -5: // case gtk.RESPONSE_OK
 		filename := filechooser.GetFilename()
-		log.Println("Filename:", filename)
 		filechooser.Destroy()
+		mw.exportAs(filename)
 	case -6: // case gtk.RESPONSE_CANCEL
 		filechooser.Destroy()
 	}
+}
+
+func (mw *MainWindow) exportAs(filename string) {
+	if _, err := os.Stat(filename); !os.IsNotExist(err) {
+		// File exists
+		// Spawn an alert dialog asking whether to overwrite
+
+		// If dialog comes back OK, overwrite, else return nil
+		return
+	}
+
+	// Create and write to filename
+	f, err := os.Create(filename)
+	if err != nil {
+		// Spawn an error message - no permissions or disk full probably
+		panic(err)
+	}
+	defer f.Close()
+
+	// Generate the .Xresources file format with the color data
+	f.WriteString(mw.exportString())
+	f.Sync()
+}
+
+func (mw *MainWindow) exportString() (export string) {
+	colors := convertAllRGBAtoHex(mw.getColors())
+	export = fmt.Sprintf("! special\n*.foreground: %s\n", colors[1])
+	export = export + fmt.Sprintf("*.background: %s\n", colors[0])
+	export = export + fmt.Sprintf("*.cursorcolor: %s\n\n", colors[1])
+	export = export + fmt.Sprintf("! black\n*.color0: %s\n", colors[2])
+	export = export + fmt.Sprintf("*.color8: %s\n\n", colors[3])
+	export = export + fmt.Sprintf("! red\n*.color1: %s\n", colors[4])
+	export = export + fmt.Sprintf("*.color9: %s\n\n", colors[5])
+	export = export + fmt.Sprintf("! green\n*.color2: %s\n", colors[6])
+	export = export + fmt.Sprintf("*.color10: %s\n\n", colors[7])
+	export = export + fmt.Sprintf("! yellow\n*.color3: %s\n", colors[8])
+	export = export + fmt.Sprintf("*.color11: %s\n\n", colors[9])
+	export = export + fmt.Sprintf("! blue\n*.color4: %s\n", colors[10])
+	export = export + fmt.Sprintf("*.color12: %s\n\n", colors[11])
+	export = export + fmt.Sprintf("! magenta\n*.color5: %s\n", colors[12])
+	export = export + fmt.Sprintf("*.color13: %s\n\n", colors[13])
+	export = export + fmt.Sprintf("! cyan\n*.color6: %s\n", colors[14])
+	export = export + fmt.Sprintf("*.color14: %s\n\n", colors[15])
+	export = export + fmt.Sprintf("! white\n*.color7: %s\n", colors[16])
+	export = export + fmt.Sprintf("*.color15: %s\n\n", colors[17])
+	return
 }
 
 func RGBAtoCairoColor(color *gdk.RGBA) (cc CairoColor) {
