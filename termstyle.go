@@ -1,15 +1,14 @@
 package main
 
-import(
+import (
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/cairo"
 	"fmt"
 	"strings"
 	"strconv"
-	//"log"
 	"os"
-	//"io/ioutil"
+	"regexp"
 )
 
 type MainWindow struct {
@@ -21,7 +20,8 @@ type MainWindow struct {
 	StyleArea *gtk.Box
 	PreviewArea *gtk.DrawingArea
 	ColorArea *gtk.Box
-	ExportArea *gtk.Box
+	MetaArea *gtk.Box
+	FileArea *gtk.Box
 
 	// Labels
 	SpecialL *gtk.Label
@@ -67,10 +67,8 @@ type MainWindow struct {
 
 	// Buttons
 	ExportButton *gtk.Button
-	RedrawButton *gtk.Button
-
-	// Dialogs
-	//ExportDialog *gtk.FileChooserDialog
+	ImportButton *gtk.Button
+	RefreshButton *gtk.Button
 }
 
 type CairoColor struct {
@@ -91,7 +89,7 @@ func main() {
 	gtk.Main()
 }
 
-func NewMainWindow() (mw *MainWindow) {
+func Newmainwindow() (mw *MainWindow) {
 	// Create main window
 	mw = new(MainWindow)
 	// Create MainWindow Window
@@ -106,13 +104,15 @@ func NewMainWindow() (mw *MainWindow) {
 	// Create StyleArea
 	mw.StyleArea, _ = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
 	// Create ExportArea
-	mw.ExportArea, _ = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
+	mw.MetaArea, _ = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	// Create DrawArea
 	mw.PreviewArea, _ = gtk.DrawingAreaNew()
 	mw.PreviewArea.Connect("draw", mw.draw)
 	// Create ColorArea
 	mw.ColorArea, _ = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 2)
-
+	// Create FileArea
+	mw.FileArea, _ = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 3)
+	
 	// Pack Areas
 	mw.MainArea.PackStart(mw.StyleArea, false, false, 3)
 	mw.MainArea.Add(mw.ExportArea)
@@ -248,8 +248,8 @@ func NewMainWindow() (mw *MainWindow) {
 	mw.WhiteB.Add(mw.WhiteLight)
 
 	// Create redraw button
-	mw.RedrawButton, _ = gtk.ButtonNewWithLabel("Refresh")
-	mw.RedrawButton.Connect("clicked", func() {
+	mw.RefreshButton, _ = gtk.ButtonNewWithLabel("Refresh")
+	mw.RefreshButton.Connect("clicked", func() {
 		mw.PreviewArea.QueueDraw()
 	})
 
@@ -272,17 +272,22 @@ func NewMainWindow() (mw *MainWindow) {
 	mw.ColorArea.Add(mw.CyanB)
 	mw.ColorArea.Add(mw.WhiteL)
 	mw.ColorArea.Add(mw.WhiteB)
-	mw.ColorArea.Add(mw.RedrawButton)
 
 	// Create export button
 	mw.ExportButton, _ = gtk.ButtonNewWithLabel("Export .Xresources")
 	mw.ExportButton.Connect("clicked", mw.saveDialog)
 
-	// Create FileChooserDialog
-	//mw.ExportDialog, _ = gtk.FileChooserDialogNew()
+	// Create import button
+	mw.ImportButton, _ = gtk.ButtonNewWithLabel("Import .Xresources")
+	mw.ImportButton.Connect("clicked", mw.openDialog)
 
-	// Pack ExportArea
-	mw.ExportArea.PackStart(mw.ExportButton, true, true, 1)
+	// Pack FileArea
+	mw.FileArea.PackStart(mw.ImportButton, true, true, 1)
+	mw.FileArea.Add(mw.ExportButton)
+	
+	// Pack MetaArea
+	mw.MetaArea.PackStart(mw.FileArea, true, true, 1)
+	mw.MetaArea.Add(mw.RefreshButton)
 
 	// Add MainArea to the Window
 	mw.Window.Add(mw.MainArea)
@@ -348,11 +353,11 @@ func (mw *MainWindow) saveDialog(button *gtk.Button) {
 		"Save", // Button 2 Text
 		gtk.RESPONSE_OK,  // Response Type
 	)
+	
 	// Set the default filename as ".Xresources"
 	filechooser.SetCurrentName(".Xresources")
 	// Get a response
 	response := filechooser.Run()
-	//log.Println("filechooser response: ", response)
 	// Get the information
 	switch response {
 	case -5: // case gtk.RESPONSE_OK
@@ -384,6 +389,55 @@ func (mw *MainWindow) exportAs(filename string) {
 	// Generate the .Xresources file format with the color data
 	f.WriteString(mw.exportString())
 	f.Sync()
+}
+
+func (mw *MainWindow) openDialog(button *gtk.Button) {
+	// Create a FileChooserDialog
+	filechooser, _ = gtk.FileChooserDialogNewWith2Buttons(
+		"Open", // Dialog title
+		mw.Window, // Parent Window
+		gtk.FILE_CHOOSER_ACTION_OPEN, // File Chooser Action
+		"Cancel", // Button 1 text
+		gtk.RESPONSE_CANCEL, // Response type
+		"Open", // Button 2 text
+		gtk.RESPONSE_OK, // Response type
+	)
+
+	// Set the default filename as ".Xresources"
+	filechooser.SetCurrentName(".Xresources")
+	// Get a response
+	response := filechooser.Run()
+	// Get the information
+	switch response {
+	case -5: // case gtk.RESPONSE_OK
+		filename := filechooser.GetFilename()
+		filechooser.Destroy()
+		mw.import(filename)
+	case -6: // case gtk.RESPONSE_CANCEL
+		filechooser.Destroy()
+	}
+}
+
+func (mw *MainWindow) import(filename string) {
+	// Parse pre-existing .Xresources
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		// File doesn't exist
+		// Spawn an alert dialog saying the file cannot be found
+
+		return
+	}
+	// Assign new values to colorbuttons and refresh
+	
+}
+
+func parseXresources(f File) (colors []*gtk.RGBA){
+	// Use regular expressions to exfiltrate hex values
+	
+}
+
+func (mw *MainWindow) assignColorButtons(colors []*gtk.RGBA) {
+	// Assign new colors to colorbuttons
+	
 }
 
 func (mw *MainWindow) exportString() (export string) {
@@ -423,7 +477,6 @@ func convertAllRGBAtoCC(colors []*gdk.RGBA) (ccs []CairoColor) {
 	// Convert a slice of gdk.RGBA colors to CairoColors
 	for _, rgba := range colors {
 		ccs = append(ccs, RGBAtoCairoColor(rgba))
-		//log.Println("colors []*gdk.RGBA index:", index)
 	}
 	return
 }
@@ -436,7 +489,6 @@ func RGBAtoHex(color *gdk.RGBA) (hexadecimal string) {
 	r, _ := strconv.Atoi(rgbvals[0])
 	g, _ := strconv.Atoi(rgbvals[1])
 	b, _ := strconv.Atoi(rgbvals[2])
-	//log.Println("r, g, b: ", r, g, b)
 	hexadecimal = fmt.Sprintf("#%s%s%s", hexenc(r), hexenc(g), hexenc(b))
 	//log.Println("Added ", hexadecimal)
 	return
