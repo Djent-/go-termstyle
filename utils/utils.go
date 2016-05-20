@@ -38,7 +38,7 @@ func RGBAtoHex(color *gdk.RGBA) (hexadecimal string) {
 	r, _ := strconv.Atoi(rgbvals[0])
 	g, _ := strconv.Atoi(rgbvals[1])
 	b, _ := strconv.Atoi(rgbvals[2])
-	hexadecimal = fmt.Sprintf("#%s%s%s", hexenc(r), hexenc(g), hexenc(b))
+	hexadecimal = fmt.Sprintf("#%s%s%s", HexEnc(r), HexEnc(g), HexEnc(b))
 	//log.Println("Added ", hexadecimal)
 	return
 }
