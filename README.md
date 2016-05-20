@@ -18,7 +18,12 @@ Plans
 3. Import a photo and grab random colors from it
   * "Easy mode"
 4. Export chosen colors as a full theme `DONE`
-5. Apply themes to various programs
-  * .Xresources
+  * Set the output format of .Xresources `NEXT ON LIST`
+5. Apply themes to various programs `PARTIAL`
+  * .Xresources `DONE`
   * SciTE
   * Find a way to edit Firefox CSS and stylish themes
+6. Import .Xresources `NEXT ON LIST`
+  * Format output .Xresources based on imported .Xresources
+7. Support non-HiDPI GTK layout
+  * See issue #1
