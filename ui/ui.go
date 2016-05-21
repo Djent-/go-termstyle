@@ -8,6 +8,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"io/ioutil"
 	"os"
+	"regexp"
 )
 
 type XresourcesFormat struct {
@@ -420,7 +421,6 @@ func (mw *MainWindow) importXresources(filename string) {
 
 		return
 	}
-	// Open file
 
 	// Assign new values to colorbuttons and refresh
 	colors, err := parseXresources(string(data))
@@ -471,5 +471,49 @@ func (mw *MainWindow) exportString() (export string) {
 func (mw *MainWindow) assignColorButtons(colors []*gdk.RGBA) {
 	// Assign new colors to colorbuttons
 
+	return
+}
+
+func parseXresources(data string) (colors map[string]*gdk.RGBA, err error) {
+	// If the Xresources contains defines
+	if matched, _ := regexp.Match(`#define`, []byte(data)); matched {
+		colors = utils.ConvertAllHextoRGBA(connectDefines(data))
+	} else {
+		// else just go through normally
+		assignregex := regexp.MustCompile(`(color\d*|foreground|background|cursorColor):\s*(#[0-9a-fA-F]+)`)
+		assigns := assignregex.FindAllStringSubmatch(data, -1)
+		assignmap := make(map[string]string)
+		for _, mathc := range assigns {
+			assignmap[match[1]] = match[2]
+		}
+		colors = utils.ConvertAllHextoRGBA(assignmap)
+	}
+	return
+}
+
+func connectDefines(data string) (colorMap map[string]string) {
+	// If the .Xresources file uses #defines everywhere,
+	// I need to link the defined name to the hex value
+	defineregex := regexp.MustCompile(`#define\s*(\w*)\s*(#[0-9a-fA-F]+)`)
+	defines := defineregex.FindAllStringSubmatch(data, -1)
+
+	// Then, link the .color[0-15]s with the variable
+	assignregex := regexp.MustCompile(`(color\d*|foreground|background|cursorColor):\s*(\w*)`)
+	assigns := assignregex.FindAllStringSubmatch(data, -1)
+
+	// Finally, go back and link the .color[0-15] with the value
+	// Data is in the format [["string matched" "parens1" "parens2"]]
+	// I could make this more compact, but it would be less readable
+	definemap := make(map[string]string)
+	for _, match := range defines {
+		definemap[match[1]] = match[2]
+	}
+	assignmap := make(map[string]string)
+	for _, match := range assigns {
+		assignmap[match[1]] = match[2]
+	}
+	for color, assignment := range assignmap {
+		colorMap[color] = definemap[assignment]
+	}
 	return
 }
