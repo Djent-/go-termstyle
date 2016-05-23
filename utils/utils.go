@@ -67,7 +67,7 @@ func HextoRGBA(hexval string) (rgba *gdk.RGBA) {
 	g := float64(hexdigits[string(byte2[0])]*16 + hexdigits[string(byte2[1])])
 	b := float64(hexdigits[string(byte3[0])]*16 + hexdigits[string(byte3[1])])
 
-	rgba = gdk.NewRGBA(r/float64(256), g/float64(256), b/float64(256), 1)
+	rgba = gdk.NewRGBA(r/float64(255), g/float64(255), b/float64(255), 1)
 	return
 }
 
@@ -86,4 +86,12 @@ func HexEnc(i int) (hexadecimal string) {
 		dig1++
 	}
 	return fmt.Sprintf("%s%s", hexdigits[dig1], hexdigits[i])
+}
+
+func ArraySwap(array [18]string) (mapswapped map[string]int) {
+	mapswapped = make(map[string]int)
+	for i, v := range array {
+		mapswapped[v] = i
+	}
+	return
 }
