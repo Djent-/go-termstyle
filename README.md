@@ -23,7 +23,7 @@ Plans
   * .Xresources `DONE`
   * SciTE
   * Find a way to edit Firefox CSS and stylish themes
-6. Import .Xresources `NEXT ON LIST`
+6. Import .Xresources `DONE`
   * Format output .Xresources based on imported .Xresources
 7. Support non-HiDPI GTK layout
   * See issue #1
