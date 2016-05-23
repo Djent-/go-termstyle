@@ -8,7 +8,10 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"regexp"
+	"strconv"
+	"strings"
 )
 
 type XresourcesFormat struct {
@@ -31,31 +34,38 @@ type MainWindow struct {
 	ColorArea   *gtk.Box
 	MetaArea    *gtk.Box
 	FileArea    *gtk.Box
+	RefreshArea *gtk.Box
 
 	// Labels
-	SpecialL *gtk.Label
-	BlackL   *gtk.Label
-	RedL     *gtk.Label
-	GreenL   *gtk.Label
-	YellowL  *gtk.Label
-	BlueL    *gtk.Label
-	MagentaL *gtk.Label
-	CyanL    *gtk.Label
-	WhiteL   *gtk.Label
+	SpecialL    *gtk.Label
+	BlackL      *gtk.Label
+	RedL        *gtk.Label
+	GreenL      *gtk.Label
+	YellowL     *gtk.Label
+	BlueL       *gtk.Label
+	MagentaL    *gtk.Label
+	CyanL       *gtk.Label
+	WhiteL      *gtk.Label
+	EyedropperL *gtk.Label
 
 	colorButtonBoxPadding uint
 	colorAreaPadding      uint
 
+	EyedropperImage *gtk.Image
+	ColorComboBox   *gtk.ComboBoxText
+	EyedropperColor string
+
 	// Boxes
-	SpecialB *gtk.Box
-	BlackB   *gtk.Box
-	RedB     *gtk.Box
-	GreenB   *gtk.Box
-	YellowB  *gtk.Box
-	BlueB    *gtk.Box
-	MagentaB *gtk.Box
-	CyanB    *gtk.Box
-	WhiteB   *gtk.Box
+	SpecialB      *gtk.Box
+	BlackB        *gtk.Box
+	RedB          *gtk.Box
+	GreenB        *gtk.Box
+	YellowB       *gtk.Box
+	BlueB         *gtk.Box
+	MagentaB      *gtk.Box
+	CyanB         *gtk.Box
+	WhiteB        *gtk.Box
+	EyedropperBox *gtk.Box
 
 	// ColorButtons
 	SpecialDark  *gtk.ColorButton // .background
@@ -78,11 +88,12 @@ type MainWindow struct {
 	WhiteLight   *gtk.ColorButton
 
 	// Buttons
-	ExportButton  *gtk.Button
-	ImportButton  *gtk.Button
-	RefreshButton *gtk.Button
-
-	CurrentFormat *XresourcesFormat
+	ExportButton       *gtk.Button
+	ImportButton       *gtk.Button
+	RefreshButton      *gtk.Button
+	EyedropperButton   *gtk.Button
+	EyedropperOKButton *gtk.Button
+	CurrentFormat      *XresourcesFormat
 }
 
 func NewMainWindow() (mw *MainWindow) {
@@ -109,11 +120,15 @@ func NewMainWindow() (mw *MainWindow) {
 	// Create FileArea
 	mw.FileArea, _ = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 3)
 
+	// Set default Xresources format
+	mw.CurrentFormat = &XresourcesDefault
+
 	// Pack Areas
 	mw.MainArea.PackStart(mw.StyleArea, false, false, 3)
 	mw.MainArea.Add(mw.MetaArea)
 	mw.StyleArea.PackStart(mw.PreviewArea, true, true, 5)
 	mw.StyleArea.Add(mw.ColorArea)
+	mw.RefreshArea, _ = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 1)
 
 	// Create labels
 	// 9 in total
@@ -161,66 +176,66 @@ func NewMainWindow() (mw *MainWindow) {
 
 	// Set ColorButtons to default state
 	mw.SpecialDark.SetUseAlpha(false)
-	sdRGBA := gdk.NewRGBA(29.0/256, 31.0/256, 33.0/256, 1)
+	sdRGBA := gdk.NewRGBA(29.0/255, 31.0/255, 33.0/255, 1)
 	mw.SpecialDark.SetRGBA(sdRGBA)
 	mw.SpecialLight.SetUseAlpha(false)
-	slRGBA := gdk.NewRGBA(197.0/256, 200.0/256, 198.0/256, 1)
+	slRGBA := gdk.NewRGBA(197.0/255, 200.0/255, 198.0/255, 1)
 	mw.SpecialLight.SetRGBA(slRGBA)
 
 	mw.BlackDark.SetUseAlpha(false)
-	bkdRGBA := gdk.NewRGBA(40.0/256, 42.0/256, 46.0/256, 1)
+	bkdRGBA := gdk.NewRGBA(40.0/255, 42.0/255, 46.0/255, 1)
 	mw.BlackDark.SetRGBA(bkdRGBA)
 	mw.BlackLight.SetUseAlpha(false)
-	bklRGBA := gdk.NewRGBA(55.0/256, 59.0/256, 65.0/256, 1)
+	bklRGBA := gdk.NewRGBA(55.0/255, 59.0/255, 65.0/255, 1)
 	mw.BlackLight.SetRGBA(bklRGBA)
 
 	mw.RedDark.SetUseAlpha(false)
-	rdRGBA := gdk.NewRGBA(165.0/256, 66.0/256, 66.0/256, 1)
+	rdRGBA := gdk.NewRGBA(165.0/255, 66.0/255, 66.0/255, 1)
 	mw.RedDark.SetRGBA(rdRGBA)
 	mw.RedLight.SetUseAlpha(false)
-	rlRGBA := gdk.NewRGBA(204.0/256, 102.0/256, 102.0/256, 1)
+	rlRGBA := gdk.NewRGBA(204.0/255, 102.0/255, 102.0/255, 1)
 	mw.RedLight.SetRGBA(rlRGBA)
 
 	mw.GreenDark.SetUseAlpha(false)
-	gdRGBA := gdk.NewRGBA(140.0/256, 148.0/256, 64.0/256, 1)
+	gdRGBA := gdk.NewRGBA(140.0/255, 148.0/255, 64.0/255, 1)
 	mw.GreenDark.SetRGBA(gdRGBA)
 	mw.GreenLight.SetUseAlpha(false)
-	glRGBA := gdk.NewRGBA(181.0/256, 189.0/256, 104.0/256, 1)
+	glRGBA := gdk.NewRGBA(181.0/255, 189.0/255, 104.0/255, 1)
 	mw.GreenLight.SetRGBA(glRGBA)
 
 	mw.YellowDark.SetUseAlpha(false)
-	ydRGBA := gdk.NewRGBA(222.0/256, 147.0/256, 95.0/256, 1)
+	ydRGBA := gdk.NewRGBA(222.0/255, 147.0/255, 95.0/255, 1)
 	mw.YellowDark.SetRGBA(ydRGBA)
 	mw.YellowLight.SetUseAlpha(false)
-	ylRGBA := gdk.NewRGBA(240.0/256, 198.0/256, 116.0/256, 1)
+	ylRGBA := gdk.NewRGBA(240.0/255, 198.0/255, 116.0/255, 1)
 	mw.YellowLight.SetRGBA(ylRGBA)
 
 	mw.BlueDark.SetUseAlpha(false)
-	bdRGBA := gdk.NewRGBA(95.0/256, 129.0/256, 157.0/256, 1)
+	bdRGBA := gdk.NewRGBA(95.0/255, 129.0/255, 157.0/255, 1)
 	mw.BlueDark.SetRGBA(bdRGBA)
 	mw.BlueLight.SetUseAlpha(false)
-	blRGBA := gdk.NewRGBA(129.0/256, 162.0/256, 190.0/256, 1)
+	blRGBA := gdk.NewRGBA(129.0/255, 162.0/255, 190.0/255, 1)
 	mw.BlueLight.SetRGBA(blRGBA)
 
 	mw.MagentaDark.SetUseAlpha(false)
-	mdRGBA := gdk.NewRGBA(133.0/256, 103.0/256, 143.0/256, 1)
+	mdRGBA := gdk.NewRGBA(133.0/255, 103.0/255, 143.0/255, 1)
 	mw.MagentaDark.SetRGBA(mdRGBA)
 	mw.MagentaLight.SetUseAlpha(false)
-	mlRGBA := gdk.NewRGBA(179.0/256, 148.0/256, 187.0/256, 1)
+	mlRGBA := gdk.NewRGBA(179.0/255, 148.0/255, 187.0/255, 1)
 	mw.MagentaLight.SetRGBA(mlRGBA)
 
 	mw.CyanDark.SetUseAlpha(false)
-	cdRGBA := gdk.NewRGBA(94.0/256, 141.0/256, 135.0/256, 1)
+	cdRGBA := gdk.NewRGBA(94.0/255, 141.0/255, 135.0/255, 1)
 	mw.CyanDark.SetRGBA(cdRGBA)
 	mw.CyanLight.SetUseAlpha(false)
-	clRGBA := gdk.NewRGBA(138.0/256, 190.0/256, 183.0/256, 1)
+	clRGBA := gdk.NewRGBA(138.0/255, 190.0/255, 183.0/255, 1)
 	mw.CyanLight.SetRGBA(clRGBA)
 
 	mw.WhiteDark.SetUseAlpha(false)
-	wdRGBA := gdk.NewRGBA(112.0/256, 120.0/256, 128.0/256, 1)
+	wdRGBA := gdk.NewRGBA(112.0/255, 120.0/255, 128.0/255, 1)
 	mw.WhiteDark.SetRGBA(wdRGBA)
 	mw.WhiteLight.SetUseAlpha(false)
-	wlRGBA := gdk.NewRGBA(197.0/256, 200.0/256, 198.0/256, 1)
+	wlRGBA := gdk.NewRGBA(197.0/255, 200.0/255, 198.0/255, 1)
 	mw.WhiteLight.SetRGBA(wlRGBA)
 
 	// Pack ColorButton Boxes
@@ -273,25 +288,58 @@ func NewMainWindow() (mw *MainWindow) {
 
 	// Create export button
 	mw.ExportButton, _ = gtk.ButtonNewWithLabel("Export .Xresources")
-	mw.ExportButton.Connect("clicked", mw.exportAs(mw.saveDialog))
+	mw.ExportButton.Connect("clicked", mw.exportXresources)
 
 	// Create import button
 	mw.ImportButton, _ = gtk.ButtonNewWithLabel("Import .Xresources")
-	mw.ImportButton.Connect("clicked", mw.importXresources(mw.openDialog))
+	mw.ImportButton.Connect("clicked", mw.importXresources)
+
+	// Create EyedropperButton and add it to its box
+	mw.EyedropperButton, _ = gtk.ButtonNew()
+	//"home/watermelon/go/src/github.com/djent-/go-termstyle/resources/eyedropper-icon-32x32.png"
+	EyedropperImage, err := gtk.ImageNewFromFile("./resources/eyedropper-icon-32x32.png")
+	if err != nil {
+		panic(err)
+	}
+	mw.EyedropperImage = EyedropperImage
+	// DesignContest: www.designcontest.com CC Attribution 4.0
+	mw.EyedropperButton.SetImage(mw.EyedropperImage)
+	mw.EyedropperButton.SetAlwaysShowImage(true)
+	mw.EyedropperButton.Connect("clicked", mw.getEyedropperColor)
+	mw.EyedropperBox, _ = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 1)
+	mw.EyedropperBox.PackStart(mw.EyedropperButton, false, false, 1)
+
+	// Create EyedropperL
+	mw.EyedropperL, _ = gtk.LabelNew("#FFFFFF")
+	mw.EyedropperColor = "#FFFFFF"
+	mw.setEyedropperLMarkup()
+
+	// Create EyedropperOKButton
+	mw.EyedropperOKButton, _ = gtk.ButtonNewWithLabel("OK")
+	// TODO: setEyedropperColor
+	mw.EyedropperOKButton.Connect("clicked", mw.setEyedropperColor)
+
+	// Create ColorSwitcher
+	mw.ColorComboBox, _ = gtk.ComboBoxTextNew()
+	mw.setColorComboBoxEntriesF()
 
 	// Pack FileArea
 	mw.FileArea.PackStart(mw.ImportButton, true, true, 1)
 	mw.FileArea.PackEnd(mw.ExportButton, true, true, 1)
 
+	// Pack RefreshArea
+	mw.RefreshArea.PackStart(mw.EyedropperBox, false, false, 5)
+	mw.RefreshArea.Add(mw.EyedropperL)
+	mw.RefreshArea.Add(mw.ColorComboBox)
+	mw.RefreshArea.Add(mw.EyedropperOKButton)
+	mw.RefreshArea.PackEnd(mw.RefreshButton, true, true, 5)
+
 	// Pack MetaArea
 	mw.MetaArea.PackStart(mw.FileArea, true, true, 1)
-	mw.MetaArea.Add(mw.RefreshButton)
+	mw.MetaArea.Add(mw.RefreshArea)
 
 	// Add MainArea to the Window
 	mw.Window.Add(mw.MainArea)
-
-	// Set default Xresources format
-	mw.CurrentFormat = &XresourcesDefault
 
 	// Return mw
 	return
@@ -370,7 +418,8 @@ func (mw *MainWindow) saveDialog() (filename string) {
 	return
 }
 
-func (mw *MainWindow) exportAs(filename string) {
+func (mw *MainWindow) exportXresources() {
+	filename := mw.saveDialog()
 	if _, err := os.Stat(filename); !os.IsNotExist(err) {
 		// File exists
 		// Spawn an alert dialog asking whether to overwrite
@@ -417,8 +466,9 @@ func (mw *MainWindow) openDialog() (filename string) {
 	return
 }
 
-func (mw *MainWindow) importXresources(filename string) {
+func (mw *MainWindow) importXresources() {
 	// Parse pre-existing .Xresources
+	filename := mw.openDialog()
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return
@@ -497,6 +547,59 @@ func (mw *MainWindow) assignColorButtons(colors map[string]*gdk.RGBA) {
 	mw.CyanLight.SetRGBA(colors["color14"])
 	mw.WhiteDark.SetRGBA(colors["color7"])
 	mw.WhiteLight.SetRGBA(colors["color15"])
+	return
+}
+
+func (mw *MainWindow) getEyedropperColor() {
+	// Execute grabc if installed, capture output, and set label markup
+	out, _ := exec.Command("grabc").Output()
+	mw.setEyedropperLText(string(out[:7]))
+	return
+}
+
+func (mw *MainWindow) setEyedropperColor() {
+	// Called when the OK button is pressed
+	// Sets the color of the colorbutton corresponding to the combobox
+	// Create an array of colorbuttons
+	colorbuttons := [18]*gtk.ColorButton{mw.SpecialDark, mw.SpecialLight, mw.BlackDark, mw.BlackLight, mw.RedDark, mw.RedLight, mw.GreenDark, mw.GreenLight, mw.YellowDark, mw.YellowLight, mw.BlueDark, mw.BlueLight, mw.MagentaDark, mw.MagentaLight, mw.CyanDark, mw.CyanLight, mw.WhiteDark, mw.WhiteLight}
+	// Get a map of formatted color names to ints
+	colornames := utils.ArraySwap(mw.getFormattedColorNames())
+	colorbuttons[colornames[mw.ColorComboBox.GetActiveText()]].SetRGBA(utils.HextoRGBA(mw.EyedropperColor))
+	return
+}
+
+func (mw *MainWindow) setColorComboBoxEntriesF() {
+	// Take the current XresourcesFormat and populate the entries
+	// of the ColorComboBox dropdown menu
+	// First empty the ComboBox
+	mw.ColorComboBox.RemoveAll()
+	colornames := mw.getFormattedColorNames()
+	for _, v := range colornames {
+		mw.ColorComboBox.AppendText(v)
+	}
+	return
+}
+
+func (mw *MainWindow) getFormattedColorNames() (colornames [18]string) {
+	colornames[0] = mw.CurrentFormat.DotBackground
+	colornames[1] = mw.CurrentFormat.DotForeground
+	for i := 0; i <= 15; i++ {
+		colornames[i+2] = mw.CurrentFormat.DotColor + strconv.Itoa(i)
+	}
+	return
+}
+
+func (mw *MainWindow) setEyedropperLText(text string) {
+	mw.EyedropperColor = strings.ToUpper(text)
+	mw.setEyedropperLMarkup()
+	return
+}
+
+func (mw *MainWindow) setEyedropperLMarkup() {
+	// Set the text color of the label to the hex value in its text
+	color := mw.EyedropperColor
+	markup := fmt.Sprintf("<span color=\"%s\">%s</span>", color, color)
+	mw.EyedropperL.SetMarkup(markup)
 	return
 }
 
