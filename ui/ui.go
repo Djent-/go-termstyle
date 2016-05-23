@@ -273,11 +273,11 @@ func NewMainWindow() (mw *MainWindow) {
 
 	// Create export button
 	mw.ExportButton, _ = gtk.ButtonNewWithLabel("Export .Xresources")
-	mw.ExportButton.Connect("clicked", mw.saveDialog)
+	mw.ExportButton.Connect("clicked", mw.exportAs(mw.saveDialog))
 
 	// Create import button
 	mw.ImportButton, _ = gtk.ButtonNewWithLabel("Import .Xresources")
-	mw.ImportButton.Connect("clicked", mw.openDialog)
+	mw.ImportButton.Connect("clicked", mw.importXresources(mw.openDialog))
 
 	// Pack FileArea
 	mw.FileArea.PackStart(mw.ImportButton, true, true, 1)
@@ -343,7 +343,7 @@ func (mw *MainWindow) getColors() (colors []*gdk.RGBA) {
 	return
 }
 
-func (mw *MainWindow) saveDialog(button *gtk.Button) {
+func (mw *MainWindow) saveDialog() (filename string) {
 	// Create a FileChooserDialog
 	filechooser, _ := gtk.FileChooserDialogNewWith2Buttons(
 		"Save As",                    // Dialog title
@@ -362,12 +362,12 @@ func (mw *MainWindow) saveDialog(button *gtk.Button) {
 	// Get the information
 	switch response {
 	case -5: // case gtk.RESPONSE_OK
-		filename := filechooser.GetFilename()
+		filename = filechooser.GetFilename()
 		filechooser.Destroy()
-		mw.exportAs(filename)
 	case -6: // case gtk.RESPONSE_CANCEL
 		filechooser.Destroy()
 	}
+	return
 }
 
 func (mw *MainWindow) exportAs(filename string) {
@@ -392,7 +392,7 @@ func (mw *MainWindow) exportAs(filename string) {
 	}
 }
 
-func (mw *MainWindow) openDialog(button *gtk.Button) {
+func (mw *MainWindow) openDialog() (filename string) {
 	// Create a FileChooserDialog
 	filechooser, _ := gtk.FileChooserDialogNewWith2Buttons(
 		"Open",                       // Dialog title
@@ -409,19 +409,18 @@ func (mw *MainWindow) openDialog(button *gtk.Button) {
 	// Get the information
 	switch response {
 	case -5: // case gtk.RESPONSE_OK
-		filename := filechooser.GetFilename()
+		filename = filechooser.GetFilename()
 		filechooser.Destroy()
-		mw.importXresources(filename)
 	case -6: // case gtk.RESPONSE_CANCEL
 		filechooser.Destroy()
 	}
+	return
 }
 
 func (mw *MainWindow) importXresources(filename string) {
 	// Parse pre-existing .Xresources
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-
 		return
 	}
 
