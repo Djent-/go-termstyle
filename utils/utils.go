@@ -52,11 +52,27 @@ func ConvertAllRGBAtoHex(colors []*gdk.RGBA) (hexcolors []string) {
 }
 
 func HextoRGBA(hexval string) (rgba *gdk.RGBA) {
+	// Input: "#123abc"
+	hexdigits := make(map[string]int)
+	hdigits := [16]string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"}
+	for i, v := range hdigits {
+		hexdigits[v] = i
+	}
+	// Split hexval string into the three bytes
+	// Multiply the top four bits by 16 then add the bottom four bits
+	byte1 := hexval[1:3]
+	byte2 := hexval[3:5]
+	byte3 := hexval[5:]
+	r := float64(hexdigits[string(byte1[0])]*16 + hexdigits[string(byte1[1])])
+	g := float64(hexdigits[string(byte2[0])]*16 + hexdigits[string(byte2[1])])
+	b := float64(hexdigits[string(byte3[0])]*16 + hexdigits[string(byte3[1])])
 
+	rgba = gdk.NewRGBA(r/float64(256), g/float64(256), b/float64(256), 1)
 	return
 }
 
-func ConvertAllHextoRGBA(hexvals [string]string) (rgbas [string]*gdk.RGBA) {
+func ConvertAllHextoRGBA(hexvals map[string]string) (rgbas map[string]*gdk.RGBA) {
+	rgbas = make(map[string]*gdk.RGBA)
 	for color, hex := range hexvals {
 		rgbas[color] = HextoRGBA(hex)
 	}

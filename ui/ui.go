@@ -43,6 +43,9 @@ type MainWindow struct {
 	CyanL    *gtk.Label
 	WhiteL   *gtk.Label
 
+	colorButtonBoxPadding uint
+	colorAreaPadding      uint
+
 	// Boxes
 	SpecialB *gtk.Box
 	BlackB   *gtk.Box
@@ -221,23 +224,24 @@ func NewMainWindow() (mw *MainWindow) {
 	mw.WhiteLight.SetRGBA(wlRGBA)
 
 	// Pack ColorButton Boxes
-	mw.SpecialB.PackStart(mw.SpecialDark, true, true, 1)
+	mw.colorButtonBoxPadding = 0
+	mw.SpecialB.PackStart(mw.SpecialDark, true, true, mw.colorButtonBoxPadding)
 	mw.SpecialB.Add(mw.SpecialLight)
-	mw.BlackB.PackStart(mw.BlackDark, true, true, 1)
+	mw.BlackB.PackStart(mw.BlackDark, true, true, mw.colorButtonBoxPadding)
 	mw.BlackB.Add(mw.BlackLight)
-	mw.RedB.PackStart(mw.RedDark, true, true, 1)
+	mw.RedB.PackStart(mw.RedDark, true, true, mw.colorButtonBoxPadding)
 	mw.RedB.Add(mw.RedLight)
-	mw.GreenB.PackStart(mw.GreenDark, true, true, 1)
+	mw.GreenB.PackStart(mw.GreenDark, true, true, mw.colorButtonBoxPadding)
 	mw.GreenB.Add(mw.GreenLight)
-	mw.YellowB.PackStart(mw.YellowDark, true, true, 1)
+	mw.YellowB.PackStart(mw.YellowDark, true, true, mw.colorButtonBoxPadding)
 	mw.YellowB.Add(mw.YellowLight)
-	mw.BlueB.PackStart(mw.BlueDark, true, true, 1)
+	mw.BlueB.PackStart(mw.BlueDark, true, true, mw.colorButtonBoxPadding)
 	mw.BlueB.Add(mw.BlueLight)
-	mw.MagentaB.PackStart(mw.MagentaDark, true, true, 1)
+	mw.MagentaB.PackStart(mw.MagentaDark, true, true, mw.colorButtonBoxPadding)
 	mw.MagentaB.Add(mw.MagentaLight)
-	mw.CyanB.PackStart(mw.CyanDark, true, true, 1)
+	mw.CyanB.PackStart(mw.CyanDark, true, true, mw.colorButtonBoxPadding)
 	mw.CyanB.Add(mw.CyanLight)
-	mw.WhiteB.PackStart(mw.WhiteDark, true, true, 1)
+	mw.WhiteB.PackStart(mw.WhiteDark, true, true, mw.colorButtonBoxPadding)
 	mw.WhiteB.Add(mw.WhiteLight)
 
 	// Create redraw button
@@ -247,7 +251,8 @@ func NewMainWindow() (mw *MainWindow) {
 	})
 
 	// Pack ColorArea
-	mw.ColorArea.PackStart(mw.SpecialL, true, true, 3)
+	mw.colorAreaPadding = 1
+	mw.ColorArea.PackStart(mw.SpecialL, true, true, mw.colorAreaPadding)
 	mw.ColorArea.Add(mw.SpecialB)
 	mw.ColorArea.Add(mw.BlackL)
 	mw.ColorArea.Add(mw.BlackB)
@@ -276,7 +281,7 @@ func NewMainWindow() (mw *MainWindow) {
 
 	// Pack FileArea
 	mw.FileArea.PackStart(mw.ImportButton, true, true, 1)
-	mw.FileArea.Add(mw.ExportButton)
+	mw.FileArea.PackEnd(mw.ExportButton, true, true, 1)
 
 	// Pack MetaArea
 	mw.MetaArea.PackStart(mw.FileArea, true, true, 1)
@@ -286,7 +291,7 @@ func NewMainWindow() (mw *MainWindow) {
 	mw.Window.Add(mw.MainArea)
 
 	// Set default Xresources format
-	mw.CurrentFormat = XresourcesDefault
+	mw.CurrentFormat = &XresourcesDefault
 
 	// Return mw
 	return
@@ -304,10 +309,10 @@ func (mw *MainWindow) draw(da *gtk.DrawingArea, cr *cairo.Context) {
 	for y := 1; y <= 9; y++ {
 		for x := 1; x <= 2; x++ {
 			//log.Println("draw z:", z)
-			cr.Rectangle(float64(x-1)*w*2.3, float64(y-1)*h, w, h)
+			cr.Rectangle(float64(x-1)*w*2.3, float64(y-1)*h+5, w, h)
 			cr.SetSourceRGB(colors[z].R, colors[z].G, colors[z].B)
 			cr.Fill()
-			cr.MoveTo(float64(x-1)*w*2.3+w+5, float64(y-1)*h+h/2)
+			cr.MoveTo(float64(x-1)*w*2.3+w+5, float64(y-1)*h+h/2+5)
 			cr.SetFontSize(fontsize)
 			cr.ShowText(hexvals[z])
 			cr.Fill()
@@ -399,8 +404,6 @@ func (mw *MainWindow) openDialog(button *gtk.Button) {
 		gtk.RESPONSE_OK,              // Response type
 	)
 
-	// Set the default filename as ".Xresources"
-	filechooser.SetCurrentName(".Xresources")
 	// Get a response
 	response := filechooser.Run()
 	// Get the information
@@ -425,24 +428,31 @@ func (mw *MainWindow) importXresources(filename string) {
 	// Assign new values to colorbuttons and refresh
 	colors, err := parseXresources(string(data))
 	mw.assignColorButtons(colors)
+	mw.PreviewArea.QueueDraw()
 }
 
-var dotcolor string = "URxvt*color"
-var dotforeground string = "URxvt.foreground"
-var dotbackground string = "URxvt.background"
-var dotcursorcolor string = "URxvt.cursorColor"
-var preamble string = `Xft.dpi: 180
+var (
+	XresourcesDefault = XresourcesFormat{
+		DotColor:       ".color",
+		DotForeground:  ".foreground",
+		DotBackground:  ".background",
+		DotCursorColor: ".cursorColor",
+		Preamble:       "",
+		Postamble:      "! vim: ft=xdefaults"}
+	XresourcesURxvtHiDPINoScrollBar = XresourcesFormat{
+		DotColor:       "URxvt*color",
+		DotForeground:  "URxvt*foreground",
+		DotBackground:  "URxvt*background",
+		DotCursorColor: "URxvt*cursorColor",
+		Preamble: `Xft.dpi: 180
 URxvt.scrollBar: false
 URxvt.font: xft:dejavu sans mono:size=10
-! URxvt.letterSpace: -3`
-var postamble string = "! vim: ft=xdefaults"
-
-const (
-	XresourcesDefault = []XresourcesFormat{DotColor: dotcolor, DotForeground: dotforeground, DotBackground: dotbackground, DotCursorColor: dotcursorcolor}
+! URxvt.letterSpace: -3`,
+		Postamble: "! vim: ft=xdefaults"}
 )
 
 func (mw *MainWindow) exportString() (export string) {
-	colors := convertAllRGBAtoHex(mw.getColors())
+	colors := utils.ConvertAllRGBAtoHex(mw.getColors())
 	f := mw.CurrentFormat
 	export = fmt.Sprintf("%s\n", f.Preamble)
 	export = export + fmt.Sprintf("! special\n%s: %s\n", f.DotForeground, colors[1])
@@ -468,9 +478,26 @@ func (mw *MainWindow) exportString() (export string) {
 	return
 }
 
-func (mw *MainWindow) assignColorButtons(colors []*gdk.RGBA) {
+func (mw *MainWindow) assignColorButtons(colors map[string]*gdk.RGBA) {
 	// Assign new colors to colorbuttons
-
+	mw.SpecialDark.SetRGBA(colors["background"])
+	mw.SpecialLight.SetRGBA(colors["foreground"])
+	mw.BlackDark.SetRGBA(colors["color0"])
+	mw.BlackLight.SetRGBA(colors["color8"])
+	mw.RedDark.SetRGBA(colors["color1"])
+	mw.RedLight.SetRGBA(colors["color9"])
+	mw.GreenDark.SetRGBA(colors["color2"])
+	mw.GreenLight.SetRGBA(colors["color10"])
+	mw.YellowDark.SetRGBA(colors["color3"])
+	mw.YellowLight.SetRGBA(colors["color11"])
+	mw.BlueDark.SetRGBA(colors["color4"])
+	mw.BlueLight.SetRGBA(colors["color12"])
+	mw.MagentaDark.SetRGBA(colors["color5"])
+	mw.MagentaLight.SetRGBA(colors["color13"])
+	mw.CyanDark.SetRGBA(colors["color6"])
+	mw.CyanLight.SetRGBA(colors["color14"])
+	mw.WhiteDark.SetRGBA(colors["color7"])
+	mw.WhiteLight.SetRGBA(colors["color15"])
 	return
 }
 
@@ -483,7 +510,7 @@ func parseXresources(data string) (colors map[string]*gdk.RGBA, err error) {
 		assignregex := regexp.MustCompile(`(color\d*|foreground|background|cursorColor):\s*(#[0-9a-fA-F]+)`)
 		assigns := assignregex.FindAllStringSubmatch(data, -1)
 		assignmap := make(map[string]string)
-		for _, mathc := range assigns {
+		for _, match := range assigns {
 			assignmap[match[1]] = match[2]
 		}
 		colors = utils.ConvertAllHextoRGBA(assignmap)
