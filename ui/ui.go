@@ -321,7 +321,7 @@ func NewMainWindow() (mw *MainWindow) {
 
 	// Create ColorSwitcher
 	mw.ColorComboBox, _ = gtk.ComboBoxTextNew()
-	mw.setColorComboBoxEntriesF()
+	mw.setColorComboBoxEntriesR()
 
 	// Pack FileArea
 	mw.FileArea.PackStart(mw.ImportButton, true, true, 1)
@@ -561,7 +561,7 @@ func (mw *MainWindow) setEyedropperColor() {
 	// Called when the OK button is pressed
 	// Sets the color of the colorbutton corresponding to the combobox
 	// Create an array of colorbuttons
-	colorbuttons := [18]*gtk.ColorButton{mw.SpecialDark, mw.SpecialLight, mw.BlackDark, mw.BlackLight, mw.RedDark, mw.RedLight, mw.GreenDark, mw.GreenLight, mw.YellowDark, mw.YellowLight, mw.BlueDark, mw.BlueLight, mw.MagentaDark, mw.MagentaLight, mw.CyanDark, mw.CyanLight, mw.WhiteDark, mw.WhiteLight}
+	colorbuttons := [18]*gtk.ColorButton{mw.SpecialDark, mw.SpecialLight, mw.BlackDark, mw.RedDark, mw.GreenDark, mw.YellowDark, mw.BlueDark, mw.MagentaDark, mw.CyanDark, mw.WhiteDark, mw.BlackLight, mw.RedLight, mw.GreenLight, mw.YellowLight, mw.BlueLight, mw.MagentaLight, mw.CyanLight, mw.WhiteLight}
 	// Get a map of formatted color names to ints
 	colornames := utils.ArraySwap(mw.getFormattedColorNames())
 	colorbuttons[colornames[mw.ColorComboBox.GetActiveText()]].SetRGBA(utils.HextoRGBA(mw.EyedropperColor))
@@ -574,6 +574,17 @@ func (mw *MainWindow) setColorComboBoxEntriesF() {
 	// First empty the ComboBox
 	mw.ColorComboBox.RemoveAll()
 	colornames := mw.getFormattedColorNames()
+	for _, v := range colornames {
+		mw.ColorComboBox.AppendText(v)
+	}
+	return
+}
+
+func (mw *MainWindow) setColorComboBoxEntriesR() {
+	// Populate the entries in the ColorComboBox based on the true
+	// names of the colors
+	mw.ColorComboBox.RemoveAll()
+	colornames := [18]string{"SpecialDark", "SpecialLight", "BlackDark", "RedDark", "GreenDark", "YellowDark", "BlueDark", "MagentaDark", "CyanDark", "WhiteDark", "BlackLight", "RedLight", "GreenLight", "YellowLight", "BlueLight", "MagentaLight", "CyanLight", "WhiteLight"}
 	for _, v := range colornames {
 		mw.ColorComboBox.AppendText(v)
 	}
