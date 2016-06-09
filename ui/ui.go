@@ -420,6 +420,9 @@ func (mw *MainWindow) saveDialog() (filename string) {
 
 func (mw *MainWindow) exportXresources() {
 	filename := mw.saveDialog()
+	if filename == "" {
+		return
+	}
 	if _, err := os.Stat(filename); !os.IsNotExist(err) {
 		// File exists
 		// Spawn an alert dialog asking whether to overwrite
@@ -563,8 +566,10 @@ func (mw *MainWindow) setEyedropperColor() {
 	// Create an array of colorbuttons
 	colorbuttons := [18]*gtk.ColorButton{mw.SpecialDark, mw.SpecialLight, mw.BlackDark, mw.RedDark, mw.GreenDark, mw.YellowDark, mw.BlueDark, mw.MagentaDark, mw.CyanDark, mw.WhiteDark, mw.BlackLight, mw.RedLight, mw.GreenLight, mw.YellowLight, mw.BlueLight, mw.MagentaLight, mw.CyanLight, mw.WhiteLight}
 	// Get a map of formatted color names to ints
-	colornames := utils.ArraySwap(mw.getFormattedColorNames())
-	colorbuttons[colornames[mw.ColorComboBox.GetActiveText()]].SetRGBA(utils.HextoRGBA(mw.EyedropperColor))
+	colornames := [18]string{"SpecialDark", "SpecialLight", "BlackDark", "RedDark", "GreenDark", "YellowDark", "BlueDark", "MagentaDark", "CyanDark", "WhiteDark", "BlackLight", "RedLight", "GreenLight", "YellowLight", "BlueLight", "MagentaLight", "CyanLight", "WhiteLight"}
+	colorindexes := utils.ArraySwap(colornames)
+	comboboxcolor := mw.ColorComboBox.GetActiveText()
+	colorbuttons[colorindexes[comboboxcolor]].SetRGBA(utils.HextoRGBA(mw.EyedropperColor))
 	return
 }
 
